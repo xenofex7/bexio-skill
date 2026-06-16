@@ -31,8 +31,9 @@ A Claude Code skill that controls [bexio](https://www.bexio.com) (Swiss business
 git clone https://github.com/xenofex7/bexio-skill.git
 cd bexio-skill
 
-# 1. Set your bexio API token (persist it in ~/.zshrc)
-export BEXIO_API_TOKEN="your-token"
+# 1. Set your bexio API token. Use ~/.zshenv (not ~/.zshrc) so it is
+#    available to non-interactive shells too - that is what the skill runs in.
+echo 'export BEXIO_API_TOKEN="your-token"' >> ~/.zshenv && source ~/.zshenv
 
 # 2. Make the skill available to Claude Code
 ln -s "$(pwd)" ~/.claude/skills/bexio
@@ -52,7 +53,7 @@ This prints the list of bexio users when the token and connection are valid.
 |---------------------|---------|------------------------------------------------------|
 | `BEXIO_API_TOKEN` * | -       | Bearer token for the bexio API, sent on every call   |
 
-`*` required. Best stored in `~/.zshrc` so it is available in every shell.
+`*` required. Store it in `~/.zshenv` (not `~/.zshrc`) so it is available to non-interactive shells too, which is what the skill runs in.
 
 ## Usage
 
