@@ -33,7 +33,7 @@ python3 scripts/bexio.py get    /2.0/contact --all          # alle Seiten
 python3 scripts/bexio.py get    /2.0/contact/42             # einzeln
 python3 scripts/bexio.py search contact name_1 Muster       # Suche (criteria=like)
 python3 scripts/bexio.py post   /2.0/contact --data '{...}' # anlegen/ändern
-python3 scripts/bexio.py post   /2.0/invoice --file inv.json # Body aus Datei
+python3 scripts/bexio.py post   /2.0/kb_invoice --file inv.json # Body aus Datei
 python3 scripts/bexio.py delete /2.0/contact/42             # löschen
 ```
 
@@ -65,11 +65,11 @@ per `KbPositionArticle` direkt als Rechnungsposition verwenden.
 
 **Rechnung erstellen** → ausstellen → versenden:
 1. `contact_id` per `search` finden, IDs (user/tax/account) auflösen
-2. `POST /2.0/invoice` mit `positions`-Array → liefert die neue `id` (Status: Entwurf)
-3. `POST /2.0/invoice/{id}/issue` → ausstellen (offen)
-4. `GET /2.0/invoice/{id}/pdf` oder `POST /2.0/invoice/{id}/send`
+2. `POST /2.0/kb_invoice` mit `positions`-Array → liefert die neue `id` (Status: Entwurf)
+3. `POST /2.0/kb_invoice/{id}/issue` → ausstellen (offen)
+4. `GET /2.0/kb_invoice/{id}/pdf` oder `POST /2.0/kb_invoice/{id}/send`
 
-Offerten gehen analog über `/2.0/quote` (zusätzlich `accept`/`reject`).
+Offerten gehen analog über `/2.0/kb_offer` (zusätzlich `accept`/`reject`).
 
 Genaue Felder, Positions-Typen, MwSt-Logik und Aktions-Endpoints stehen in
 [reference/api-notes.md](reference/api-notes.md).

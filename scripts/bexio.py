@@ -9,7 +9,7 @@ Beispiele:
   bexio.py get /2.0/contact --all
   bexio.py search contact name_1 Muster
   bexio.py post /2.0/contact --data '{"contact_type_id":2,"name_1":"Muster","user_id":1,"owner_id":1}'
-  bexio.py post /2.0/invoice --file rechnung.json
+  bexio.py post /2.0/kb_invoice --file rechnung.json
   bexio.py delete /2.0/contact/42
 """
 import argparse
@@ -133,7 +133,7 @@ def main():
     d.set_defaults(func=cmd_delete)
 
     s = sub.add_parser("search", help="Suche auf einer Ressource")
-    s.add_argument("resource", help="z.B. contact, invoice, quote")
+    s.add_argument("resource", help="z.B. contact, kb_invoice, kb_offer")
     s.add_argument("field")
     s.add_argument("value")
     s.add_argument("--criteria", default="like", help="like, =, >, < ... (default: like)")

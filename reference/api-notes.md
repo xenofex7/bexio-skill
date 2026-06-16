@@ -17,7 +17,7 @@ Die meisten Ressourcen liegen unter `/2.0/...`, einige neuere (z.B. Steuern) unt
 | Sprachen (`language_id`) | `GET /2.0/language` |
 | Länder (`country_id`) | `GET /2.0/country` |
 | Artikel (`article_id`) | `GET /2.0/article` (siehe eigener Abschnitt) |
-| Projekte (`pr_project_id`) | `GET /2.0/pr_project` |
+| Projekte (`project_id`) | `GET /2.0/pr_project` (braucht Projekt-Berechtigung, sonst 403) |
 | Kontaktgruppen | `GET /2.0/contact_group` |
 
 ## Suche
@@ -113,7 +113,7 @@ Lagerartikel zusätzlich mit `"article_type_id": 1`, `"is_stock": true` und
 `GET /2.0/stock_location`. Artikel lassen sich als Position per
 `KbPositionArticle` (Feld `article_id`) direkt in Rechnungen/Offerten ziehen.
 
-## Rechnung (`/2.0/invoice`) und Offerte (`/2.0/quote`)
+## Rechnung (`/2.0/kb_invoice`) und Offerte (`/2.0/kb_offer`)
 
 Beide haben dieselbe Struktur. Kopf-Felder beim Erstellen:
 
@@ -123,7 +123,7 @@ Beide haben dieselbe Struktur. Kopf-Felder beim Erstellen:
 | `user_id` | **Pflicht.** aus `/3.0/users` |
 | `title` | Titel des Dokuments |
 | `contact_sub_id` | Ansprechpartner (optional) |
-| `pr_project_id` | Projektzuordnung (optional) |
+| `project_id` | Projektzuordnung (optional) |
 | `language_id`, `currency_id`, `payment_type_id`, `bank_account_id` | optional, sonst Defaults |
 | `header`, `footer` | Frei-Text oben/unten |
 | `mwst_type` | 0 = inkl. MwSt, 1 = exkl. MwSt, 2 = MwSt-frei/0% |
@@ -157,12 +157,12 @@ Beim Erstellen entsteht ein **Entwurf**. Danach:
 
 | Aktion | Rechnung | Offerte |
 |---|---|---|
-| Ausstellen | `POST /2.0/invoice/{id}/issue` | `POST /2.0/quote/{id}/issue` |
-| PDF holen | `GET /2.0/invoice/{id}/pdf` | `GET /2.0/quote/{id}/pdf` |
-| Per Mail senden | `POST /2.0/invoice/{id}/send` | `POST /2.0/quote/{id}/send` |
-| Zahlung erfassen | `POST /2.0/invoice/{id}/payment` | - |
-| Annehmen/Ablehnen | - | `POST /2.0/quote/{id}/accept` bzw. `/reject` |
-| Stornieren | `POST /2.0/invoice/{id}/cancel` | - |
+| Ausstellen | `POST /2.0/kb_invoice/{id}/issue` | `POST /2.0/kb_offer/{id}/issue` |
+| PDF holen | `GET /2.0/kb_invoice/{id}/pdf` | `GET /2.0/kb_offer/{id}/pdf` |
+| Per Mail senden | `POST /2.0/kb_invoice/{id}/send` | `POST /2.0/kb_offer/{id}/send` |
+| Zahlung erfassen | `POST /2.0/kb_invoice/{id}/payment` | - |
+| Annehmen/Ablehnen | - | `POST /2.0/kb_offer/{id}/accept` bzw. `/reject` |
+| Stornieren | `POST /2.0/kb_invoice/{id}/cancel` | - |
 
 `send` verschickt eine echte Mail an den Kunden - immer vorher bestätigen lassen.
 
