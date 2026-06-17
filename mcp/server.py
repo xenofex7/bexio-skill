@@ -19,6 +19,9 @@ import urllib.request
 import uvicorn
 from mcp.server.fastmcp import FastMCP
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+import auth as oauth
 
 BASE_URL = "https://api.bexio.com"
 BEXIO_API_TOKEN = os.environ.get("BEXIO_API_TOKEN")  # optional fallback
@@ -262,18 +265,37 @@ def get_quote_pdf(quote_id: int) -> dict:
 
 # --- ASGI app with optional bearer gate ---
 
-class TokenForward(BaseHTTPMiddleware):
-    """Take the incoming bearer token and expose it to the tools for forwarding
-    to bexio. Held only for the duration of the request, never stored."""
+def _challenge():
+    """401 that tells claude.ai where to start the OAuth flow."""
+    return Response(status_code=401, headers={
+        "WWW-Authenticate": f'Bearer resource_metadata="{oauth.PUBLIC_URL}'
+                            f'/.well-known/oauth-protected-resource"'})
+
+
+class AuthGate(BaseHTTPMiddleware):
+    """Guards the /mcp endpoint. Two ways in:
+    - an OAuth access token we issued (claude.ai) -> use the server-side bexio token
+    - any other bearer (Claude Code) -> pass it through to bexio as-is
+    No token -> 401 with a pointer to the OAuth metadata."""
     async def dispatch(self, request, call_next):
-        auth = request.headers.get("authorization", "")
-        if auth.lower().startswith("bearer "):
-            _request_token.set(auth[7:].strip())
+        if request.url.path.startswith("/mcp"):
+            header = request.headers.get("authorization", "")
+            token = header[7:].strip() if header.lower().startswith("bearer ") else ""
+            if not token:
+                return _challenge()
+            if token.startswith(oauth.ACCESS_PREFIX):
+                if not oauth.valid_access_token(token):
+                    return _challenge()
+                _request_token.set(BEXIO_API_TOKEN)
+            else:
+                _request_token.set(token)
         return await call_next(request)
 
 
 app = mcp.streamable_http_app()
-app.add_middleware(TokenForward)
+app.add_middleware(AuthGate)
+for _route in oauth.routes:
+    app.router.routes.append(_route)
 
 
 if __name__ == "__main__":

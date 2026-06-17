@@ -5,7 +5,8 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
-    # No secrets: the bexio token is passed through per request from the client.
-    # Optional single-user fallback:
-    # environment:
-    #   - BEXIO_API_TOKEN=${BEXIO_API_TOKEN}
+    environment:
+      # OAuth mode (claude.ai). Leave empty for Claude Code pass-through only.
+      - BEXIO_API_TOKEN=${BEXIO_API_TOKEN:-}
+      - PUBLIC_URL=${PUBLIC_URL:-}
+      - OAUTH_PASSWORD=${OAUTH_PASSWORD:-}
