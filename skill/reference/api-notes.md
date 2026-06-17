@@ -1,8 +1,14 @@
 # bexio API - Referenz
 
+Offizielle Doku: **https://docs.bexio.com/** (massgebliche Quelle für alle Endpunkte).
+
 Basis-URL: `https://api.bexio.com`. Auth: `Authorization: Bearer <token>`.
 Die meisten Ressourcen liegen unter `/2.0/...`, einige neuere (z.B. Steuern) unter
 `/3.0/...`. Bei einem 404 die andere Version probieren bzw. auf docs.bexio.com nachsehen.
+
+Endpunkte hier wurden am 17.06.2026 verifiziert (live gegen die API + Abgleich mit
+dem Client `codebar-ag/laravel-bexio`). Einzige Ausnahme: `POST /2.0/kb_invoice/{id}/send`
+ist laut bexio-Doku korrekt, liess sich aber nicht ohne echten Mail-Versand gegenprüfen.
 
 ## Discovery-Endpoints (IDs auflösen)
 
