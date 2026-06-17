@@ -74,13 +74,13 @@ def _entry_to_contact(entry):
             f[name] = child.text.strip()
 
     is_org = f.get("type") == "organisation" or ("org" in f and "name" not in f)
-    street = " ".join(p for p in (f.get("street"), f.get("streetno")) if p)
 
     contact = {
         "contact_type_id": 1 if is_org else 2,   # 1=Firma, 2=Person
         "name_1": f.get("org") if is_org else f.get("name", ""),
         "name_2": "" if is_org else f.get("firstname", ""),
-        "address": street,
+        "street_name": f.get("street", ""),   # bexio: address ist read-only,
+        "house_number": f.get("streetno", ""),  # Strasse via street_name/house_number
         "postcode": f.get("zip", ""),
         "city": f.get("city", ""),
         "canton": f.get("canton", ""),       # kein bexio-Feld, nur zur Info

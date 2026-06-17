@@ -92,6 +92,13 @@ def list_units() -> list:
     return _request("GET", "/2.0/unit")
 
 
+@mcp.tool()
+def list_countries() -> list:
+    """List countries. Use the returned id for country_id on contacts
+    (Switzerland is id 1)."""
+    return _request("GET", "/2.0/country")
+
+
 # --- Contacts ---
 
 @mcp.tool()
@@ -110,17 +117,21 @@ def get_contact(contact_id: int) -> dict:
 
 @mcp.tool()
 def create_contact(name_1: str, contact_type_id: int = 2, name_2: str = "",
-                   mail: str = "", address: str = "", postcode: str = "",
-                   city: str = "", phone_fixed: str = "", phone_mobile: str = "",
+                   mail: str = "", street_name: str = "", house_number: str = "",
+                   postcode: str = "", city: str = "", country_id: int = 1,
+                   phone_fixed: str = "", phone_mobile: str = "", url: str = "",
                    user_id: int = 1, owner_id: int = 1) -> dict:
     """Create a contact. contact_type_id: 1=company, 2=person.
     name_1 is the company name or last name; name_2 the first name/addition.
-    Only non-empty optional fields are sent - bexio rejects empty extra fields."""
+    The street goes in street_name + house_number (the combined `address` field
+    is read-only in bexio - sending it returns HTTP 422). country_id defaults to
+    1 (Switzerland); resolve others via list_countries. Maps 1:1 to the fields
+    from search_phonebook. Only non-empty optional fields are sent."""
     body = {"contact_type_id": contact_type_id, "name_1": name_1,
-            "user_id": user_id, "owner_id": owner_id}
-    optional = {"name_2": name_2, "mail": mail, "address": address,
-                "postcode": postcode, "city": city,
-                "phone_fixed": phone_fixed, "phone_mobile": phone_mobile}
+            "country_id": country_id, "user_id": user_id, "owner_id": owner_id}
+    optional = {"name_2": name_2, "mail": mail, "street_name": street_name,
+                "house_number": house_number, "postcode": postcode, "city": city,
+                "phone_fixed": phone_fixed, "phone_mobile": phone_mobile, "url": url}
     body.update({k: v for k, v in optional.items() if v})
     return _request("POST", "/2.0/contact", body=body)
 
@@ -171,12 +182,13 @@ def _entry_to_contact(entry) -> dict:
         elif child.text and child.text.strip():
             f[name] = child.text.strip()
     is_org = f.get("type") == "organisation" or ("org" in f and "name" not in f)
-    street = " ".join(p for p in (f.get("street"), f.get("streetno")) if p)
     contact = {
         "contact_type_id": 1 if is_org else 2,
         "name_1": f.get("org") if is_org else f.get("name", ""),
         "name_2": "" if is_org else f.get("firstname", ""),
-        "address": street, "postcode": f.get("zip", ""),
+        "street_name": f.get("street", ""),     # bexio: address is read-only,
+        "house_number": f.get("streetno", ""),  # write street via these two
+        "postcode": f.get("zip", ""),
         "city": f.get("city", ""), "canton": f.get("canton", ""),
         "phone_fixed": f.get("phone", ""), "mail": extras.get("email", ""),
         "url": extras.get("website", ""), "occupation": f.get("occupation", ""),

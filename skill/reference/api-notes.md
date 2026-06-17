@@ -49,7 +49,8 @@ Felder beim Erstellen (`POST /2.0/contact`):
 | `name_2` | Zusatz bzw. Vorname |
 | `user_id` | **Pflicht.** Verantwortlicher (aus `/3.0/users`) |
 | `owner_id` | **Pflicht.** Eigentümer (aus `/3.0/users`) |
-| `address`, `postcode`, `city` | Adresse |
+| `street_name`, `house_number` | Strasse + Nr. **getrennt.** Das kombinierte `address` ist **read-only** (wird daraus berechnet) - beim Schreiben ignoriert bzw. abgelehnt |
+| `address_addition`, `postcode`, `city` | Adresszusatz, PLZ, Ort |
 | `country_id` | aus `/2.0/country` (Schweiz finden, nicht raten) |
 | `mail`, `phone_fixed`, `phone_mobile` | Kontaktdaten |
 | `language_id`, `salutation_id`, `contact_group_ids` | optional |
@@ -62,9 +63,11 @@ Beispiel:
   "name_1": "Muster",
   "name_2": "Hans",
   "mail": "hans@example.ch",
-  "address": "Musterweg 1",
+  "street_name": "Musterweg",
+  "house_number": "1",
   "postcode": "8000",
   "city": "Zürich",
+  "country_id": 1,
   "user_id": 1,
   "owner_id": 1
 }
@@ -92,7 +95,8 @@ Mapping search.ch (tel:-Feld) → bexio-Contact:
 | `type` = organisation/person | `contact_type_id` | 1 = Firma, 2 = Person |
 | `org` (Firma) / `name` (Person) | `name_1` | Firmenname bzw. Nachname |
 | `firstname` | `name_2` | nur Person |
-| `street` + `streetno` | `address` | zusammengesetzt |
+| `street` | `street_name` | bexio: `address` ist read-only, Strasse getrennt schreiben |
+| `streetno` | `house_number` | |
 | `zip` | `postcode` | |
 | `city` | `city` | |
 | `phone` | `phone_fixed` | |
