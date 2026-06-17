@@ -3,11 +3,13 @@
 Exposes the bexio REST API as MCP tools over Streamable HTTP, so Claude
 (web, iOS app, or any MCP client) can drive bexio as a remote connector.
 
-Auth model:
-- BEXIO_API_TOKEN  - server-side bearer token for the bexio API itself
-- MCP_AUTH_TOKEN   - shared secret clients must send as `Authorization: Bearer <token>`
-                     (omit to disable the gate, e.g. behind a private network)
+Auth model - token pass-through (no secret stored on the server):
+The client sends the bexio API token as `Authorization: Bearer <token>` on every
+request (configured once in the Claude connector). The server forwards it to bexio
+and never persists it. BEXIO_API_TOKEN may be set as an optional server-side
+fallback for single-user self-hosting.
 """
+import contextvars
 import json
 import os
 import urllib.error
@@ -17,26 +19,35 @@ import urllib.request
 import uvicorn
 from mcp.server.fastmcp import FastMCP
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
 
 BASE_URL = "https://api.bexio.com"
-BEXIO_API_TOKEN = os.environ.get("BEXIO_API_TOKEN")
-MCP_AUTH_TOKEN = os.environ.get("MCP_AUTH_TOKEN")
+BEXIO_API_TOKEN = os.environ.get("BEXIO_API_TOKEN")  # optional fallback
 PORT = int(os.environ.get("PORT", "8080"))
+
+# Per-request bexio token, set by the TokenForward middleware from the incoming
+# Authorization header. Held only for the duration of the request, never stored.
+_request_token = contextvars.ContextVar("bexio_token", default=None)
+
+
+def _token():
+    token = _request_token.get() or BEXIO_API_TOKEN
+    if not token:
+        raise RuntimeError(
+            "No bexio token: send it as 'Authorization: Bearer <token>' "
+            "or set BEXIO_API_TOKEN on the server")
+    return token
 
 mcp = FastMCP("bexio", host="0.0.0.0", port=PORT)
 
 
 def _request(method: str, path: str, body=None, query=None):
     """Authenticated call against the bexio API. Returns parsed JSON or raises."""
-    if not BEXIO_API_TOKEN:
-        raise RuntimeError("BEXIO_API_TOKEN is not set on the server")
     url = BASE_URL + path
     if query:
         url += ("&" if "?" in url else "?") + urllib.parse.urlencode(query)
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
-    req.add_header("Authorization", f"Bearer {BEXIO_API_TOKEN}")
+    req.add_header("Authorization", f"Bearer {_token()}")
     req.add_header("Accept", "application/json")
     if data is not None:
         req.add_header("Content-Type", "application/json")
@@ -251,15 +262,18 @@ def get_quote_pdf(quote_id: int) -> dict:
 
 # --- ASGI app with optional bearer gate ---
 
-class BearerAuth(BaseHTTPMiddleware):
+class TokenForward(BaseHTTPMiddleware):
+    """Take the incoming bearer token and expose it to the tools for forwarding
+    to bexio. Held only for the duration of the request, never stored."""
     async def dispatch(self, request, call_next):
-        if MCP_AUTH_TOKEN and request.headers.get("authorization") != f"Bearer {MCP_AUTH_TOKEN}":
-            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        auth = request.headers.get("authorization", "")
+        if auth.lower().startswith("bearer "):
+            _request_token.set(auth[7:].strip())
         return await call_next(request)
 
 
 app = mcp.streamable_http_app()
-app.add_middleware(BearerAuth)
+app.add_middleware(TokenForward)
 
 
 if __name__ == "__main__":
