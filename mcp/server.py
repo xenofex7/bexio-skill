@@ -303,6 +303,65 @@ def cancel_invoice(invoice_id: int) -> dict:
     return _request("POST", f"/2.0/kb_invoice/{invoice_id}/cancel")
 
 
+# --- Invoice positions (line items on an existing invoice) ---
+# bexio does NOT accept a `positions` array when editing an invoice. Positions on
+# an existing document are their own sub-resources, added/removed one by one.
+
+_POSITION_PATHS = {
+    "custom": "kb_position_custom", "article": "kb_position_article",
+    "text": "kb_position_text", "subtotal": "kb_position_subtotal",
+    "discount": "kb_position_discount", "pagebreak": "kb_position_pagebreak",
+}
+
+
+@mcp.tool()
+def add_invoice_position_custom(invoice_id: int, text: str, amount: str,
+                                unit_price: str, account_id: int, tax_id: int,
+                                unit_id: int = 1,
+                                discount_in_percent: str = "") -> dict:
+    """Append a free-text line to an existing invoice (the only way to add a line
+    after creation - the edit endpoint rejects positions). amount/unit_price as
+    strings. Resolve account_id/tax_id/unit_id via the list_* tools first."""
+    body = {"amount": amount, "unit_price": unit_price, "account_id": account_id,
+            "tax_id": tax_id, "unit_id": unit_id, "text": text}
+    if discount_in_percent:
+        body["discount_in_percent"] = discount_in_percent
+    return _request("POST", f"/2.0/kb_invoice/{invoice_id}/kb_position_custom",
+                    body=body)
+
+
+@mcp.tool()
+def add_invoice_position_article(invoice_id: int, article_id: int, amount: str,
+                                 unit_price: str = "", tax_id: int = 0,
+                                 account_id: int = 0, text: str = "") -> dict:
+    """Append an article line to an existing invoice. Only article_id and amount
+    are required; bexio fills price/tax/account from the article unless overridden."""
+    body = {"article_id": article_id, "amount": amount}
+    if unit_price:
+        body["unit_price"] = unit_price
+    if tax_id:
+        body["tax_id"] = tax_id
+    if account_id:
+        body["account_id"] = account_id
+    if text:
+        body["text"] = text
+    return _request("POST", f"/2.0/kb_invoice/{invoice_id}/kb_position_article",
+                    body=body)
+
+
+@mcp.tool()
+def delete_invoice_position(invoice_id: int, position_id: int,
+                            position_type: str = "custom") -> dict:
+    """Remove a line from an invoice. position_type is one of custom, article,
+    text, subtotal, discount, pagebreak (see the `type` field from get_invoice's
+    positions). Confirm with the user first."""
+    sub = _POSITION_PATHS.get(position_type)
+    if not sub:
+        raise RuntimeError(f"Unknown position_type '{position_type}'; "
+                           f"use one of {list(_POSITION_PATHS)}")
+    return _request("DELETE", f"/2.0/kb_invoice/{invoice_id}/{sub}/{position_id}")
+
+
 # --- Quotes / offers (kb_offer) ---
 
 @mcp.tool()

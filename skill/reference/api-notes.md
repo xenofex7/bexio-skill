@@ -191,6 +191,21 @@ Beide haben dieselbe Struktur. Kopf-Felder beim Erstellen:
 `amount`, `unit_price`, `value` als Strings übergeben (bexio-Konvention).
 `account_id` und `tax_id` aus den Discovery-Endpoints - **nicht raten**.
 
+**Positionen einer bestehenden Rechnung:** Das `positions`-Array geht nur beim
+**Erstellen** mit. Beim Ändern lehnt `POST /2.0/kb_invoice/{id}` Positionen ab
+(`Widget schema does not include positions`). Eine Zeile nachträglich anhängen/
+löschen läuft über eigene Sub-Endpunkte (analog für `kb_offer`):
+
+```bash
+# anhängen (eine Position):
+POST   /2.0/kb_invoice/{id}/kb_position_custom    # Freitext-Zeile
+POST   /2.0/kb_invoice/{id}/kb_position_article   # Artikel-Zeile
+# löschen (IDs/Typen aus GET /2.0/kb_invoice/{id} -> positions):
+DELETE /2.0/kb_invoice/{id}/kb_position_custom/{position_id}
+```
+
+Sub-Pfade je `type`: `kb_position_custom|article|text|subtotal|discount|pagebreak`.
+
 ### Aktionen nach dem Erstellen
 
 Beim Erstellen entsteht ein **Entwurf**. Danach:
