@@ -202,9 +202,13 @@ Beim Erstellen entsteht ein **Entwurf**. Danach:
 | Per Mail senden | `POST /2.0/kb_invoice/{id}/send` | `POST /2.0/kb_offer/{id}/send` |
 | Zahlung erfassen | `POST /2.0/kb_invoice/{id}/payment` | - |
 | Annehmen/Ablehnen | - | `POST /2.0/kb_offer/{id}/accept` bzw. `/reject` |
-| Stornieren | `POST /2.0/kb_invoice/{id}/cancel` | - |
+| Ändern (ganzes Objekt) | `POST /2.0/kb_invoice/{id}` | `POST /2.0/kb_offer/{id}` |
+| Entwurf löschen | `DELETE /2.0/kb_invoice/{id}` | `DELETE /2.0/kb_offer/{id}` |
+| Stornieren (ausgestellt) | `POST /2.0/kb_invoice/{id}/cancel` | - |
 
 `send` verschickt eine echte Mail an den Kunden - immer vorher bestätigen lassen.
+Ändern lohnt sich meist nur im **Entwurf**; eine ausgestellte Rechnung wird
+**storniert**, nicht gelöscht. Löschen geht nur, solange Entwurf.
 
 ### Minimal-Beispiel Rechnung
 

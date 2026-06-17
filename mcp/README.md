@@ -6,7 +6,7 @@ An MCP server that exposes the bexio REST API as tools over Streamable HTTP. Run
 
 - Contacts - search, get, create, update, delete
 - Articles - search, get
-- Invoices - list, get, create, issue, send by mail, PDF
+- Invoices - list, get, create, update, issue, send by mail, PDF, delete (draft), cancel (issued)
 - Quotes - list, get, create, issue, accept, reject, PDF
 - Reference helpers - users, taxes, accounts, units (to resolve ids)
 - Phone-book lookup - find unknown contacts via tel.search.ch (`search_phonebook`)

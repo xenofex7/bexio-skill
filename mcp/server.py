@@ -281,6 +281,28 @@ def send_invoice(invoice_id: int, recipient_email: str = "", subject: str = "",
     return _request("POST", f"/2.0/kb_invoice/{invoice_id}/send", body=body)
 
 
+@mcp.tool()
+def update_invoice(invoice_id: int, fields: dict) -> dict:
+    """Edit an invoice (usually only sensible while it is a draft). bexio expects
+    the full object - fetch with get_invoice, merge your changes into `fields`
+    (e.g. a new `positions` list or `is_valid_from`), then pass it here."""
+    return _request("POST", f"/2.0/kb_invoice/{invoice_id}", body=fields)
+
+
+@mcp.tool()
+def delete_invoice(invoice_id: int) -> dict:
+    """Delete an invoice. Only works while it is still a DRAFT (issued invoices
+    must be cancelled instead). Irreversible - confirm with the user first."""
+    return _request("DELETE", f"/2.0/kb_invoice/{invoice_id}")
+
+
+@mcp.tool()
+def cancel_invoice(invoice_id: int) -> dict:
+    """Cancel an already-issued invoice (sets it to cancelled). Use this instead
+    of delete_invoice once an invoice has been issued. Confirm with the user first."""
+    return _request("POST", f"/2.0/kb_invoice/{invoice_id}/cancel")
+
+
 # --- Quotes / offers (kb_offer) ---
 
 @mcp.tool()
