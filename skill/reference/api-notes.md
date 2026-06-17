@@ -73,6 +73,36 @@ Beispiel:
 Ändern: `POST /2.0/contact/{id}` mit den zu ändernden Feldern (bexio erwartet beim
 Edit i.d.R. das ganze Objekt - erst `GET` holen, anpassen, zurückschicken).
 
+## Telefonbuch-Suche (tel.search.ch)
+
+Externe API, um neue Kontakte im Schweizer Telefonbuch zu finden, wenn sie in
+bexio noch fehlen. Eigener Client `scripts/searchch.py`, Key in `SEARCHCH_API_KEY`.
+Doku: https://search.ch/tel/api/help. Antwort ist ein Atom/XML-Feed; das Script
+parst ihn und gibt die Treffer direkt mit bexio-Contact-Feldnamen aus.
+
+```bash
+python3 scripts/searchch.py "Hans Muster" --wo Zürich   # was + wo
+python3 scripts/searchch.py "Muster AG" --wo 8000 --firma --max 5
+```
+
+Mapping search.ch (tel:-Feld) → bexio-Contact:
+
+| search.ch | bexio | Hinweis |
+|---|---|---|
+| `type` = organisation/person | `contact_type_id` | 1 = Firma, 2 = Person |
+| `org` (Firma) / `name` (Person) | `name_1` | Firmenname bzw. Nachname |
+| `firstname` | `name_2` | nur Person |
+| `street` + `streetno` | `address` | zusammengesetzt |
+| `zip` | `postcode` | |
+| `city` | `city` | |
+| `phone` | `phone_fixed` | |
+| `extra type=email` | `mail` | |
+| `extra type=website` | `url` | |
+| `canton`, `occupation` | - | nur Info, **nicht** in den POST-Body |
+
+Für `country_id` ist kein search.ch-Wert vorhanden - bei Bedarf Schweiz über
+`/2.0/country` auflösen. `user_id`/`owner_id` wie üblich vor dem Anlegen setzen.
+
 ## Artikel (`/2.0/article`)
 
 Produkte und Dienstleistungen. CRUD + `search` wie bei Kontakten

@@ -25,6 +25,10 @@ einen API-Token zu erstellen und zu setzen:
 export BEXIO_API_TOKEN="..."
 ```
 
+**Optional** für die Telefonbuch-Suche (search.ch): Key in `SEARCHCH_API_KEY`
+(auf https://search.ch/tel/api/help bestellen). Nur nötig, wenn Kontakte über
+search.ch gefunden werden sollen - siehe "Kontakt nicht in bexio".
+
 ## Das CLI
 
 ```bash
@@ -58,6 +62,26 @@ python3 scripts/bexio.py get /2.0/unit        # unit_id (Einheiten)
 
 **Kontakt anlegen** (Person): `contact_type_id` 1=Firma, 2=Person; `name_1` = Firma
 bzw. Nachname; `user_id`/`owner_id` aus `/3.0/users`.
+
+**Kontakt nicht in bexio - auf search.ch nachschlagen** (Schweizer Telefonbuch):
+Wenn eine Kontaktsuche in bexio leer bleibt, kann der Kontakt über
+`scripts/searchch.py` im Telefonbuch gefunden und dann in bexio angelegt werden.
+Braucht den Key in `SEARCHCH_API_KEY` (siehe unten). Kaskade:
+
+1. `bexio.py search contact name_1 <Name>` → keine Treffer
+2. **Nutzer fragen**, ob auf search.ch gesucht werden soll
+3. `searchch.py "<Name>" --wo <Ort>` → Kandidaten (Felder schon bexio-tauglich)
+4. **Treffer zur Auswahl/Bestätigung** anzeigen (oft mehrere)
+5. Nach OK: `user_id`/`owner_id` auflösen, die Felder des Treffers in den
+   Contact-Body übernehmen und `bexio.py post /2.0/contact` → anlegen
+
+```bash
+python3 scripts/searchch.py "Hans Muster" --wo Zürich   # Privat + Firma
+python3 scripts/searchch.py "Muster AG" --wo 8000 --firma
+```
+
+Die Felder `canton` und `occupation` sind nur zur Info (keine bexio-Contact-Felder)
+und gehören nicht in den POST-Body. Anlegen wie immer vorher bestätigen lassen.
 
 **Artikel anlegen**: `intern_name` + `article_type_id` (1=Produkt, 2=Dienstleistung);
 Verkaufspreis `sale_price`, MwSt `tax_income_id` aus `/3.0/taxes`. Artikel lassen sich

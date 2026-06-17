@@ -17,6 +17,7 @@ A Claude Code skill that controls [bexio](https://www.bexio.com) (Swiss business
 - Create invoices and quotes with custom, article, text, subtotal and discount positions
 - Issue documents, fetch the PDF, send by mail, record payments
 - Reach any bexio endpoint via a generic `get` / `post` / `delete` / `search` CLI
+- Look up unknown contacts in the Swiss phone book (tel.search.ch) and create them in bexio
 - No dependencies - pure Python standard library, bearer-token auth
 
 ## Requirements
@@ -52,8 +53,9 @@ This prints the list of bexio users when the token and connection are valid.
 | Variable            | Default | Description                                          |
 |---------------------|---------|------------------------------------------------------|
 | `BEXIO_API_TOKEN` * | -       | Bearer token for the bexio API, sent on every call   |
+| `SEARCHCH_API_KEY`  | -       | API key for tel.search.ch, only for the phone-book lookup ([get one](https://search.ch/tel/api/help)) |
 
-`*` required. Store it in `~/.zshenv` (not `~/.zshrc`) so it is available to non-interactive shells too, which is what the skill runs in.
+`*` required. Store it in `~/.zshenv` (not `~/.zshrc`) so it is available to non-interactive shells too, which is what the skill runs in. `SEARCHCH_API_KEY` is optional and goes in the same place.
 
 ## Usage
 
@@ -67,6 +69,8 @@ python3 scripts/bexio.py get    /2.0/contact --all          # all pages
 python3 scripts/bexio.py search contact name_1 Muster       # search
 python3 scripts/bexio.py post   /2.0/contact --data '{...}' # create / edit
 python3 scripts/bexio.py delete /2.0/contact/42             # delete
+
+python3 scripts/searchch.py "Hans Muster" --wo Zürich       # phone-book lookup
 ```
 
 See [SKILL.md](SKILL.md) for the workflow and [reference/api-notes.md](reference/api-notes.md) for fields, position types and action endpoints.

@@ -15,6 +15,7 @@ import os
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 
 import uvicorn
 from mcp.server.fastmcp import FastMCP
@@ -25,6 +26,8 @@ import auth as oauth
 
 BASE_URL = "https://api.bexio.com"
 BEXIO_API_TOKEN = os.environ.get("BEXIO_API_TOKEN")  # optional fallback
+SEARCHCH_API_KEY = os.environ.get("SEARCHCH_API_KEY")  # for the phonebook tool
+API_URL_TEL = "https://search.ch/tel/api/"
 PORT = int(os.environ.get("PORT", "8080"))
 
 # Per-request bexio token, set by the TokenForward middleware from the incoming
@@ -108,14 +111,17 @@ def get_contact(contact_id: int) -> dict:
 @mcp.tool()
 def create_contact(name_1: str, contact_type_id: int = 2, name_2: str = "",
                    mail: str = "", address: str = "", postcode: str = "",
-                   city: str = "", phone_mobile: str = "",
+                   city: str = "", phone_fixed: str = "", phone_mobile: str = "",
                    user_id: int = 1, owner_id: int = 1) -> dict:
     """Create a contact. contact_type_id: 1=company, 2=person.
-    name_1 is the company name or last name; name_2 the first name/addition."""
+    name_1 is the company name or last name; name_2 the first name/addition.
+    Only non-empty optional fields are sent - bexio rejects empty extra fields."""
     body = {"contact_type_id": contact_type_id, "name_1": name_1,
-            "name_2": name_2, "mail": mail, "address": address,
-            "postcode": postcode, "city": city, "phone_mobile": phone_mobile,
             "user_id": user_id, "owner_id": owner_id}
+    optional = {"name_2": name_2, "mail": mail, "address": address,
+                "postcode": postcode, "city": city,
+                "phone_fixed": phone_fixed, "phone_mobile": phone_mobile}
+    body.update({k: v for k, v in optional.items() if v})
     return _request("POST", "/2.0/contact", body=body)
 
 
@@ -147,6 +153,63 @@ def get_article(article_id: int) -> dict:
     return _request("GET", f"/2.0/article/{article_id}")
 
 
+# --- Phonebook lookup (tel.search.ch) ---
+
+def _local(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _entry_to_contact(entry) -> dict:
+    """Map an Atom <entry> from tel.search.ch onto bexio contact fields."""
+    f, extras = {}, {}
+    for child in entry:
+        name = _local(child.tag)
+        if name == "extra":
+            etype = next((v for k, v in child.attrib.items()
+                          if _local(k) == "type"), "extra")
+            extras[etype] = (child.text or "").strip()
+        elif child.text and child.text.strip():
+            f[name] = child.text.strip()
+    is_org = f.get("type") == "organisation" or ("org" in f and "name" not in f)
+    street = " ".join(p for p in (f.get("street"), f.get("streetno")) if p)
+    contact = {
+        "contact_type_id": 1 if is_org else 2,
+        "name_1": f.get("org") if is_org else f.get("name", ""),
+        "name_2": "" if is_org else f.get("firstname", ""),
+        "address": street, "postcode": f.get("zip", ""),
+        "city": f.get("city", ""), "canton": f.get("canton", ""),
+        "phone_fixed": f.get("phone", ""), "mail": extras.get("email", ""),
+        "url": extras.get("website", ""), "occupation": f.get("occupation", ""),
+    }
+    return {k: v for k, v in contact.items() if v not in ("", None)}
+
+
+@mcp.tool()
+def search_phonebook(query: str, where: str = "", only: str = "") -> list:
+    """Look up a person or company in the Swiss phone book (tel.search.ch).
+    Use this AFTER search_contacts returns nothing, to find a new contact's
+    address and phone. query: name, company or phone number; where: city, zip,
+    street or canton; only: '' (both), 'privat' or 'firma'. Returns candidates
+    with bexio-ready fields (name_1, name_2, address, postcode, city,
+    phone_fixed, mail, ...) - confirm one, then pass its fields to create_contact."""
+    if not SEARCHCH_API_KEY:
+        raise RuntimeError("Set SEARCHCH_API_KEY on the server to use search_phonebook.")
+    params = {"was": query, "key": SEARCHCH_API_KEY, "maxnum": 10, "lang": "de"}
+    if where:
+        params["wo"] = where
+    if only in ("privat", "firma"):
+        params[only] = "1"
+    url = API_URL_TEL + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"Accept": "application/xml"})
+    try:
+        with urllib.request.urlopen(req) as resp:
+            xml = resp.read().decode()
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"search.ch HTTP {e.code} {e.reason}: {e.read().decode(errors='replace')}")
+    root = ET.fromstring(xml)
+    return [_entry_to_contact(e) for e in root.iter() if _local(e.tag) == "entry"]
+
+
 # --- Invoices (kb_invoice) ---
 
 @mcp.tool()
@@ -169,15 +232,13 @@ def create_invoice(contact_id: int, positions: list, title: str = "",
     {"type":"KbPositionCustom","amount":"1","unit_price":"100.00","account_id":<id>,"tax_id":<id>,"text":"..."}.
     Resolve account_id/tax_id/unit_id via the list_* tools first.
     mwst_type: 0=incl. VAT, 1=excl. VAT, 2=VAT-exempt. Returns the created draft."""
-    body = {"contact_id": contact_id, "user_id": user_id, "title": title,
+    body = {"contact_id": contact_id, "user_id": user_id,
             "mwst_type": mwst_type, "mwst_is_net": mwst_is_net,
             "positions": positions}
-    if is_valid_from:
-        body["is_valid_from"] = is_valid_from
-    if header:
-        body["header"] = header
-    if footer:
-        body["footer"] = footer
+    for key, val in (("title", title), ("is_valid_from", is_valid_from),
+                     ("header", header), ("footer", footer)):
+        if val:
+            body[key] = val
     return _request("POST", "/2.0/kb_invoice", body=body)
 
 
@@ -227,15 +288,13 @@ def create_quote(contact_id: int, positions: list, title: str = "",
                  user_id: int = 1, mwst_type: int = 0, mwst_is_net: bool = True,
                  is_valid_from: str = "", header: str = "", footer: str = "") -> dict:
     """Create a quote/offer as a draft. Same position structure as create_invoice."""
-    body = {"contact_id": contact_id, "user_id": user_id, "title": title,
+    body = {"contact_id": contact_id, "user_id": user_id,
             "mwst_type": mwst_type, "mwst_is_net": mwst_is_net,
             "positions": positions}
-    if is_valid_from:
-        body["is_valid_from"] = is_valid_from
-    if header:
-        body["header"] = header
-    if footer:
-        body["footer"] = footer
+    for key, val in (("title", title), ("is_valid_from", is_valid_from),
+                     ("header", header), ("footer", footer)):
+        if val:
+            body[key] = val
     return _request("POST", "/2.0/kb_offer", body=body)
 
 

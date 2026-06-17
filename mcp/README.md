@@ -9,6 +9,7 @@ An MCP server that exposes the bexio REST API as tools over Streamable HTTP. Run
 - Invoices - list, get, create, issue, send by mail, PDF
 - Quotes - list, get, create, issue, accept, reject, PDF
 - Reference helpers - users, taxes, accounts, units (to resolve ids)
+- Phone-book lookup - find unknown contacts via tel.search.ch (`search_phonebook`)
 - Two auth modes: OAuth for claude.ai, bearer pass-through for Claude Code
 
 ## Authentication
@@ -43,6 +44,7 @@ The server listens on `http://localhost:8080/mcp`. Put it behind your reverse pr
 | `BEXIO_API_TOKEN` | -       | bexio token used in OAuth mode (and as pass-through fallback)        |
 | `PUBLIC_URL`      | -       | Public HTTPS base URL, no trailing slash. Required for OAuth         |
 | `OAUTH_PASSWORD`  | -       | Password for the OAuth login screen (single user)                   |
+| `SEARCHCH_API_KEY`| -       | API key for tel.search.ch; enables the `search_phonebook` tool ([get one](https://search.ch/tel/api/help)) |
 | `PORT`            | `8080`  | Port the server listens on                                          |
 
 Pass-through mode (Claude Code) needs none of these - send the bexio token as the bearer.
