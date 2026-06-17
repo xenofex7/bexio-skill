@@ -356,6 +356,21 @@ def get_quote_pdf(quote_id: int) -> dict:
     return _request("GET", f"/2.0/kb_offer/{quote_id}/pdf")
 
 
+@mcp.tool()
+def update_quote(quote_id: int, fields: dict) -> dict:
+    """Edit a quote (usually only sensible while it is a draft). bexio expects
+    the full object - fetch with get_quote, merge your changes into `fields`
+    (e.g. a new `positions` list or `is_valid_from`), then pass it here."""
+    return _request("POST", f"/2.0/kb_offer/{quote_id}", body=fields)
+
+
+@mcp.tool()
+def delete_quote(quote_id: int) -> dict:
+    """Delete a quote. Best used while it is still a draft. Irreversible -
+    confirm with the user first."""
+    return _request("DELETE", f"/2.0/kb_offer/{quote_id}")
+
+
 # --- ASGI app with optional bearer gate ---
 
 def _challenge():
