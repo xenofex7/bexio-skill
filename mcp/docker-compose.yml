@@ -10,3 +10,11 @@ services:
       - BEXIO_API_TOKEN=${BEXIO_API_TOKEN:-}
       - PUBLIC_URL=${PUBLIC_URL:-}
       - OAUTH_PASSWORD=${OAUTH_PASSWORD:-}
+    # Healthcheck hits the unauthenticated OAuth metadata endpoint (200 without a
+    # token). The python:3.12-slim base has no curl/wget, so use urllib.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/.well-known/oauth-protected-resource', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
